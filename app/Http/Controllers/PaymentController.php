@@ -75,23 +75,25 @@ class PaymentController extends Controller
         }
 
         $sameOrder = $result->order_id === $order['code'];
-        $sameAmount = $result->gross_amount === $order['amount'];
+        $sameAmount = (int) $result->gross_amount === (int) $order['amount'];
 
-        if (!$sameOrder || $sameAmount) {
+        if (!$sameOrder || !$sameAmount) {
             return to_route('demo-payment.index')->with('message', 'Status tidak valid. Pastikan metode bayar sudah dipilih di Snap.');
         }
 
-        $midtransStatus = $result->transaction_status ?? 'unknown';
+        $midtransStatus = strtolower((string) ($result->transaction_status ?? 'unknown'));
         if ($midtransStatus === 'settlement' || $midtransStatus === 'capture') {
             $order['status'] = 'paid';
             $request->session()->put('demo_order', $order);
             return to_route('demo-payment.index')->with('message', 'Transaksi berhasil.');
         }
+
+        return to_route('demo-payment.index')->with('message', 'Pembayaran belum selesai. Silakan lanjutkan proses pembayaran di Midtrans.');
     }
 
     private function configMidtrans(): void
     {
-        Config::$serverKey = config('service.midtrans.server_key');
+        Config::$serverKey = config('services.midtrans.server_key');
         Config::$isProduction = false;
     }
     /**
